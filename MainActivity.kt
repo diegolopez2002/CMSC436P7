@@ -10,8 +10,6 @@ import org.xml.sax.XMLReader
 import java.io.InputStream
 import javax.xml.parsers.SAXParserFactory
 
-// Diego Lopez, Shifa Bhutta, Zhuo Cheng Xie, Riya Singhal
-
 class MainActivity : AppCompatActivity() {
     private lateinit var gameView: GameView
     private lateinit var balloons: Balloons
