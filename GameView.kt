@@ -1,38 +1,61 @@
-
 package com.example.project7
 
-import org.xml.sax.Attributes
-import org.xml.sax.helpers.DefaultHandler
+import android.content.Context
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.view.MotionEvent
+import android.view.View
+import android.widget.Toast
 
-class GameView : DefaultHandler() {
-    private val balloons = Balloons()
-    private var currentElement: String? = null
-    private var currentX: Float = 0f
-    private var currentY: Float = 0f
-    private var currentRadius: Float = 0f
+class GameView(context: Context, val balloons: Balloons) : View(context) {
+    private val paint = Paint()
+    private var gameOver = false
 
-    fun getBalloons(): Balloons {
-        return balloons
+    init {
+        // Set the color in code (choose your color)
+        paint.color = Color.RED
+        paint.style = Paint.Style.FILL
     }
 
-    override fun startElement(uri: String?, localName: String?, qName: String?, attributes: Attributes?) {
-        currentElement = qName
-    }
+    override fun onDraw(canvas: Canvas?) {
+        super.onDraw(canvas)
+        if (canvas == null) return
 
-    override fun characters(ch: CharArray?, start: Int, length: Int) {
-        val value = ch?.let { String(it, start, length) }
-        when (currentElement) {
-            "x" -> currentX = value?.toFloat() ?: 0f
-            "y" -> currentY = value?.toFloat() ?: 0f
-            "radius" -> currentRadius = value?.toFloat() ?: 0f
+        // Draw each balloon if it has not been popped
+        for (balloon in balloons.balloonList) {
+            if (!balloon.isPopped) {
+                canvas.drawCircle(balloon.x, balloon.y, balloon.radius, paint)
+            }
         }
     }
 
-    override fun endElement(uri: String?, localName: String?, qName: String?) {
-        if (qName == "balloon") {
-            val balloon = Balloon(currentX, currentY, currentRadius)
-            balloons.addBalloon(balloon)
+    override fun onTouchEvent(event: MotionEvent?): Boolean {
+        if (event == null || gameOver) return false
+
+        if (event.action == MotionEvent.ACTION_DOWN) {
+            val touchX = event.x
+            val touchY = event.y
+            balloons.incrementAttempt()  // Count every touch as an attempt
+
+            // Check each balloon to see if the touch is inside it
+            for (balloon in balloons.balloonList) {
+                if (!balloon.isPopped && balloon.contains(touchX, touchY)) {
+                    balloon.pop()
+                    break  // Only one balloon is popped per touch
+                }
+            }
+
+            // Evaluate game state after the attempt
+            if (balloons.isWin()) {
+                Toast.makeText(context, "YOU WON", Toast.LENGTH_SHORT).show()
+                gameOver = true
+            } else if (balloons.isLose()) {
+                Toast.makeText(context, "YOU LOST", Toast.LENGTH_SHORT).show()
+                gameOver = true
+            }
+            invalidate()  // Force redraw to reflect updated balloons
         }
-        currentElement = null
+        return true
     }
 }
