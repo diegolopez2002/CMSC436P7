@@ -4,7 +4,7 @@ package com.example.project7
 import org.xml.sax.Attributes
 import org.xml.sax.helpers.DefaultHandler
 
-class SAXHandler : DefaultHandler() {
+class GameView : DefaultHandler() {
     private val balloons = Balloons()
     private var currentElement: String? = null
     private var currentX: Float = 0f
