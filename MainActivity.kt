@@ -1,63 +1,83 @@
 package com.example.project7
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.Log
-import android.view.MotionEvent
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import org.xml.sax.InputSource
-import org.xml.sax.XMLReader
-import java.io.InputStream
-import javax.xml.parsers.SAXParserFactory
+import androidx.activity.ComponentActivity
+import org.json.JSONArray
+import java.io.BufferedReader
+import java.io.InputStreamReader
 
-class MainActivity : AppCompatActivity() {
-    private lateinit var gameView: GameView
+// Group Members: [Your Names Here]
+
+class MainActivity : ComponentActivity() {
     private lateinit var balloons: Balloons
-    private var attempts = 0
-    private var maxAttempts = 0
+    private lateinit var gameView: GameView
 
+    @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
 
-        gameView = findViewById(R.id.gameView)
-        balloons = parseXML(R.raw.balloons3) // Default to balloons3.xml
-        maxAttempts = balloons.balloons.size + 3
+        // Parse JSON file
+        val jsonString = readJsonFile(R.raw.balloons3)
+        val jsonArray = JSONArray(jsonString)
+        balloons = Balloons()
 
-        balloons.balloons.forEach { balloon ->
-            Log.d("MainActivity", "Balloon: x=${balloon.x}, y=${balloon.y}, radius=${balloon.radius}")
+        // Populate balloons and log data
+        for (i in 0 until jsonArray.length()) {
+            val jsonObject = jsonArray.getJSONObject(i)
+            val x      = jsonObject.getDouble("x").toFloat()
+            val y      = jsonObject.getDouble("y").toFloat()
+            val radius = jsonObject.getDouble("radius").toFloat()
+
+            balloons.addBalloon(Balloon(x, y, radius))
         }
 
-        gameView.setBalloons(balloons)
-    }
+// 2) Now log exactly once per balloon
+        val tag = "MainActivity"
+        for (b in balloons.getBalloons()) {        // or `.all` if that’s your API
+            val sx = b.x.toInt()
+            val sy = b.y.toInt()
+            val sr = b.radius.toInt()
+            Log.i(tag, "$sx; $sy; $sr")
+        }
 
-    private fun parseXML(resourceId: Int): Balloons {
-        val parserFactory = SAXParserFactory.newInstance()
-        val parser = parserFactory.newSAXParser()
-        val xmlReader: XMLReader = parser.xmlReader
-        val saxHandler = SAXHandler()
-        xmlReader.contentHandler = saxHandler
+        // Set up GameView
+        gameView = GameView(this, balloons)
+        setContentView(gameView)
 
-        val inputStream: InputStream = resources.openRawResource(resourceId)
-        xmlReader.parse(InputSource(inputStream))
-
-        return saxHandler.getBalloons()
-    }
-
-    override fun onTouchEvent(event: MotionEvent?): Boolean {
-        if (event?.action == MotionEvent.ACTION_DOWN) {
-            attempts++
-            if (balloons.popBalloon(event.x, event.y)) {
-                gameView.invalidate()
+        // Set click listener for popping balloons
+        gameView.setOnTouchListener { _, event ->
+            val x = event.x
+            val y = event.y
+            val popped = balloons.popBalloon(x, y)
+            if (popped) {
+                gameView.invalidate() // Redraw view
             }
 
-            if (balloons.allPopped()) {
+            // Check game status
+            if (balloons.isGameWon()) {
                 Toast.makeText(this, "YOU WON", Toast.LENGTH_LONG).show()
-            } else if (attempts >= maxAttempts) {
-                Toast.makeText(this, "Game Over. You ran out of attempts!", Toast.LENGTH_LONG).show()
-                finish()
+                gameView.isEnabled = false
+            } else if (balloons.isGameLost()) {
+                Toast.makeText(this, "YOU LOST", Toast.LENGTH_LONG).show()
+                gameView.isEnabled = false
             }
+            true
         }
-        return super.onTouchEvent(event)
+    }
+
+    private fun readJsonFile(resourceId: Int): String {
+        val inputStream = resources.openRawResource(resourceId)
+        val reader = BufferedReader(InputStreamReader(inputStream))
+        val stringBuilder = StringBuilder()
+        var line: String?
+        while (reader.readLine().also { line = it } != null) {
+            stringBuilder.append(line)
+        }
+        reader.close()
+        inputStream.close()
+        return stringBuilder.toString()
     }
 }
