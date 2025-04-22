@@ -1,10 +1,18 @@
-
 package com.example.project7
 
-data class Balloon(var x: Float, var y: Float, var radius: Float, var isPopped: Boolean = false)
+data class Balloon(
+    val x: Float,
+    val y: Float,
+    val radius: Float,
+    var isPopped: Boolean = false
+) {
+    fun isClicked(cx: Float, cy: Float): Boolean {
+        if (isPopped) return false
+        val distance = kotlin.math.sqrt((cx - x) * (cx - x) + (cy - y) * (cy - y))
+        return distance <= radius
+    }
 
-fun Balloon.isInside(touchX: Float, touchY: Float): Boolean {
-    val dx = touchX - x
-    val dy = touchY - y
-    return dx * dx + dy * dy <= radius * radius
+    fun pop() {
+        isPopped = true
+    }
 }
